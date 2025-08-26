@@ -1,0 +1,31 @@
+name: rfid_parent_app
+description: A Flutter app for RFID parent notifications
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.1.0
+  firebase_core: ^2.15.1
+  firebase_messaging: ^14.7.1
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
+  flutter_local_notifications: ^15.1.1
+  provider: ^6.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  # Remove the assets section or create the assets directory
+  # assets:
+  #   - assets/
