@@ -9,7 +9,7 @@ A full-stack **RFID Attendance and Notification System** built with:
 
 ## 📂 Project Structure  
 
-```text
+```
 .
 ├── my-app/                 # Server (Next.js + TypeScript + Firebase)
 │   ├── app/                # Next.js routes and dashboard
@@ -24,7 +24,7 @@ A full-stack **RFID Attendance and Notification System** built with:
 │   └── ota/                # OTA update code
 │
 └── README.md
-``
+```
 
 ## 🚀 Features  
 
