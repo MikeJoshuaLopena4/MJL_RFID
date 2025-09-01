@@ -3,7 +3,7 @@
 A full-stack **RFID Attendance and Notification System** built with:  
 - **Next.js (TypeScript)** – Backend API + Web Dashboard  
 - **Flutter** – Mobile app for users/parents to log in and receive notifications  
-- **ESP32/ESP8266 Firmware** – Embedded system that scans RFID cards, sends logs via HTTP POST, and supports OTA updates  
+- **ESP32/WT32-ETHO1 Firmware** – Embedded system that scans RFID cards, sends logs via HTTP POST, and supports OTA updates  
 
 ---
 
