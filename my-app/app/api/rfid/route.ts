@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { db, fcm, admin } from "@/lib/firebaseAdmin";
 
+// ✅ Helper: get PH local Date object
+function getPhilippinesDate(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json(); // { uid, macAddress }
     console.log("📡 RFID Data:", body);
 
-    // 1. Always save raw log
+    // 1. Always save raw log (UTC, safe for DB)
     const docRef = db.collection("rfidLogs").doc();
     await docRef.set({
       ...body,
@@ -41,23 +48,23 @@ export async function POST(req: Request) {
 
     const userData = matchedUser.data();
     const cardData = matchedCard.data();
-    const now = new Date();
 
-    // 3. Work out today’s session doc in a top-level "rfidSessions" collection
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
+    // ✅ PH-local time for session tracking
+    const nowPH = getPhilippinesDate();
+
+    // 3. Work out today’s session doc in PH timezone
+    const yyyy = nowPH.getFullYear();
+    const mm = String(nowPH.getMonth() + 1).padStart(2, "0");
+    const dd = String(nowPH.getDate()).padStart(2, "0");
     const todayId = `${yyyy}-${mm}-${dd}`;
 
     const sessionRef = db
-    .collection("rfidSessions")
-    .doc(todayId)
-    .collection("cards")
-    .doc(body.uid);
+      .collection("rfidSessions")
+      .doc(todayId)
+      .collection("cards")
+      .doc(body.uid);
 
     const sessionDoc = await sessionRef.get();
- // get existing session data
-
 
     type SessionData = {
       AMIn?: FirebaseFirestore.Timestamp;
@@ -69,29 +76,27 @@ export async function POST(req: Request) {
       ? (sessionDoc.data() as SessionData)
       : {};
 
-
-    const ts = admin.firestore.Timestamp.fromDate(now);
-    const hour = now.getHours();
+    // ✅ Use PH-local timestamp for sessions
+    const tsPH = admin.firestore.Timestamp.fromDate(nowPH);
+    const hour = nowPH.getHours();
 
     // track which field was updated (AMIn, AMOut, PMIn, PMOut)
     let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
 
     if (hour < 12) {
-      // AM range
       if (!sessionData.AMIn) {
-        sessionData.AMIn = ts;
+        sessionData.AMIn = tsPH;
         updatedField = "AMIn";
       } else {
-        sessionData.AMOut = ts; // replace with latest
+        sessionData.AMOut = tsPH;
         updatedField = "AMOut";
       }
     } else {
-      // PM range
       if (!sessionData.PMIn) {
-        sessionData.PMIn = ts;
+        sessionData.PMIn = tsPH;
         updatedField = "PMIn";
       } else {
-        sessionData.PMOut = ts; // replace with latest
+        sessionData.PMOut = tsPH;
         updatedField = "PMOut";
       }
     }
@@ -101,15 +106,12 @@ export async function POST(req: Request) {
     // 4. Send FCM notification to parent device
     if (userData?.fcmToken && updatedField) {
       const studentName = cardData?.label || "Student";
-      const formattedTime = now.toLocaleTimeString("en-US", {
+      const formattedTime = nowPH.toLocaleTimeString("en-PH", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
-        timeZone: "Asia/Manila", // Force PH timezone
       });
 
-
-      // Decide notification text
       let statusMessage = "";
       switch (updatedField) {
         case "AMIn":
@@ -141,7 +143,6 @@ export async function POST(req: Request) {
 
       console.log(`✅ Notification sent: ${studentName} ${statusMessage}`);
     }
-
 
     return NextResponse.json({ success: true, saved: body }, { status: 200 });
   } catch (err) {
