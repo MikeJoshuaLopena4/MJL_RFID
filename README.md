@@ -57,13 +57,14 @@ A full-stack **RFID Attendance and Notification System** built with:
 Create a .env.local file with your Firebase config:
 
 env
-
+```
 NEXT_PUBLIC_FIREBASE_API_KEY=xxxx
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=xxxx
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=xxxx
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=xxxx
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=xxxx
 NEXT_PUBLIC_FIREBASE_APP_ID=xxxx
+```
 Run dev server:
 
 npm run dev
