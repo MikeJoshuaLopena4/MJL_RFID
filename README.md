@@ -9,6 +9,7 @@ A full-stack **RFID Attendance and Notification System** built with:
 
 ## 📂 Project Structure  
 
+.
 ├── my-app/ # Server (Next.js + TypeScript + Firebase)
 │ ├── app/ # Next.js routes and dashboard
 │ ├── lib/ # Firebase client/server config
@@ -22,7 +23,6 @@ A full-stack **RFID Attendance and Notification System** built with:
 │ └── ota/ # OTA update code
 │
 └── README.md
-
 ---
 
 ## 🚀 Features  
@@ -56,7 +56,7 @@ A full-stack **RFID Attendance and Notification System** built with:
 Create a .env.local file with your Firebase config:
 
 env
-Copy code
+
 NEXT_PUBLIC_FIREBASE_API_KEY=xxxx
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=xxxx
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=xxxx
@@ -65,40 +65,30 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=xxxx
 NEXT_PUBLIC_FIREBASE_APP_ID=xxxx
 Run dev server:
 
-bash
-Copy code
 npm run dev
 2. Mobile App (Flutter)
 Go to my-flutter/my_rfid/
 
 Install dependencies:
 
-bash
-Copy code
-cd my-flutter/my_rfid
-flutter pub get
-Run on emulator or device:
+:- cd my-flutter/my_rfid
+:- flutter pub get
 
-bash
-Copy code
-flutter run
+Run on emulator or device:
+:- flutter run
+
 3. Firmware (ESP32/ESP8266)
 Go to firmware/
-
 Open in Arduino IDE or PlatformIO
-
 Configure WiFi SSID, Password, and Server URL in config.h (or main sketch)
 
 Flash the board:
-
-bash
-Copy code
 pio run --target upload
 OTA Update: Once device is running, you can push new firmware via WiFi
 
 🔐 Firestore Rules (Sample)
 js
-Copy code
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -132,29 +122,22 @@ service cloud.firestore {
     }
   }
 }
+
 📸 Screenshots
 Dashboard – real-time logs & sessions
-
 Mobile app – notifications & attendance records
-
 ESP firmware – RFID scanning and POST request
 
 📌 Roadmap
  Add admin panel for managing users/cards
-
  Export reports (CSV/PDF)
-
  Improve OTA update UI
-
  Role-based Firestore rules
 
 🛠️ Tech Stack
 Frontend: Flutter, TailwindCSS (dashboard UI)
-
 Backend: Next.js (TypeScript), Firebase Firestore, Firebase Auth
-
 Embedded: ESP32/ESP8266, MFRC522 (RFID reader), Arduino/PlatformIO
-
 Notifications: Firebase Cloud Messaging (FCM)
 
 
