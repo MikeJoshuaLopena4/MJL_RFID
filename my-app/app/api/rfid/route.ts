@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, fcm, admin } from "@/lib/firebaseAdmin";
 
-// ✅ Helper: get PH local Date object
+// ✅ Helper: get PH-local date & time as Date object
 function getPhilippinesDate(): Date {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-  );
+  const now = new Date();
+  // Convert to PH timezone string
+  const phString = now.toLocaleString("en-US", { timeZone: "Asia/Manila" });
+  // Parse back to Date object
+  return new Date(phString);
 }
 
 export async function POST(req: Request) {
@@ -21,6 +23,7 @@ export async function POST(req: Request) {
     // Save raw log
     await db.collection("rfidLogs").doc().set({
       ...body,
+      // Store as Timestamp but now will appear like PH time
       timestamp: admin.firestore.Timestamp.fromDate(nowPH),
       localDate: `${yyyy}-${mm}-${dd}`,
       localTime: nowPH.toLocaleTimeString("en-PH", {
