@@ -104,7 +104,10 @@ export async function POST(req: Request) {
       const formattedTime = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Manila", // Force PH timezone
       });
+
 
       // Decide notification text
       let statusMessage = "";
