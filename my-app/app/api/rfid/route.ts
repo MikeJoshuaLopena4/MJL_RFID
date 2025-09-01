@@ -13,11 +13,22 @@ export async function POST(req: Request) {
     const body = await req.json(); // { uid, macAddress }
     console.log("📡 RFID Data:", body);
 
-    // 1. Always save raw log (UTC, safe for DB)
+    // 1. Always save raw log (PH-local timestamp)
+    const nowPhil = getPhilippinesDate();
+    const yyyyy = nowPhil.getFullYear();
+    const mmm = String(nowPhil.getMonth() + 1).padStart(2, "0");
+    const ddd = String(nowPhil.getDate()).padStart(2, "0");
+
     const docRef = db.collection("rfidLogs").doc();
     await docRef.set({
       ...body,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: admin.firestore.Timestamp.fromDate(nowPhil), // ✅ PH-local
+      localDate: `${yyyyy}-${mmm}-${ddd}`, // 🔹 extra for queries
+      localTime: nowPhil.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }), // 🔹 extra for easier reading
     });
 
     // 2. Find the user who owns this card
