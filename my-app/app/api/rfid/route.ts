@@ -9,6 +9,19 @@ function getPhilippinesDate(): Date {
   );
 }
 
+function formatPHDateTime(date: Date): string {
+  return date.toLocaleString("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }) + " UTC+8";
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -74,37 +87,36 @@ export async function POST(req: Request) {
         .doc(body.uid);
 
       const sessionDoc = await sessionRef.get();
-
+      const formattedPH = formatPHDateTime(nowPH);
       type SessionData = {
-        AMIn?: FirebaseFirestore.Timestamp;
-        AMOut?: FirebaseFirestore.Timestamp;
-        PMIn?: FirebaseFirestore.Timestamp;
-        PMOut?: FirebaseFirestore.Timestamp;
+        AMIn?: string;
+        AMOut?: string;
+        PMIn?: string;
+        PMOut?: string;
       };
       const sessionData: SessionData = sessionDoc.exists
         ? (sessionDoc.data() as SessionData)
         : {};
-
       // ✅ Use PH-local timestamp
-      const ts = admin.firestore.Timestamp.fromDate(nowPH);
       const hour = nowPH.getHours();
 
       let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
 
+
       if (hour < 12) {
         if (!sessionData.AMIn) {
-          sessionData.AMIn = ts;
+          sessionData.AMIn = formattedPH;
           updatedField = "AMIn";
         } else {
-          sessionData.AMOut = ts;
+          sessionData.AMOut = formattedPH;
           updatedField = "AMOut";
         }
       } else {
         if (!sessionData.PMIn) {
-          sessionData.PMIn = ts;
+          sessionData.PMIn = formattedPH;
           updatedField = "PMIn";
         } else {
-          sessionData.PMOut = ts;
+          sessionData.PMOut = formattedPH;
           updatedField = "PMOut";
         }
       }
