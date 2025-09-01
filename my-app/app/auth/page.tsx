@@ -25,10 +25,15 @@ export default function AuthPage() {
         await createUserWithEmailAndPassword(auth, email, password);
         alert("🎉 Signup successful!");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     }
   };
+
 
   return (
     <div style={{ maxWidth: 400, margin: "2rem auto" }}>

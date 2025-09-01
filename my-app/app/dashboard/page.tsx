@@ -1,6 +1,7 @@
 // app/dashboard/page.tsx
 "use client";
 
+import { Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebaseClient";
 import {
@@ -12,8 +13,25 @@ import {
 } from "firebase/firestore";
 
 export default function DashboardPage() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
+  // 🔹 Types
+  type Log = {
+    id: string;
+    uid: string;
+    macAddress?: string;
+    timestamp?: Timestamp;
+  };
+
+  type Session = {
+    id: string; // UID of the card
+    AMIn?: Timestamp;
+    AMOut?: Timestamp;
+    PMIn?: Timestamp;
+    PMOut?: Timestamp;
+  };
+
+  // 🔹 State
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [registeredUIDs, setRegisteredUIDs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -24,7 +42,7 @@ export default function DashboardPage() {
     );
 
     const unsubLogs = onSnapshot(logsQuery, (snapshot) => {
-      setLogs(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      setLogs(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Log[]);
     });
 
     // --- Right panel: Today's Sessions ---
@@ -37,7 +55,7 @@ export default function DashboardPage() {
     const sessionsQuery = collection(db, "rfidSessions", todayId, "cards");
 
     const unsubSessions = onSnapshot(sessionsQuery, (snapshot) => {
-      setSessions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      setSessions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Session[]);
     });
 
     // --- Registered UIDs from users collection ---

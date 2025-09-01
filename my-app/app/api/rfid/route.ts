@@ -56,7 +56,19 @@ export async function POST(req: Request) {
     .doc(body.uid);
 
     const sessionDoc = await sessionRef.get();
-    let sessionData: any = sessionDoc.exists ? sessionDoc.data() : {};
+ // get existing session data
+
+
+    type SessionData = {
+      AMIn?: FirebaseFirestore.Timestamp;
+      AMOut?: FirebaseFirestore.Timestamp;
+      PMIn?: FirebaseFirestore.Timestamp;
+      PMOut?: FirebaseFirestore.Timestamp;
+    };
+    const sessionData: SessionData = sessionDoc.exists
+      ? (sessionDoc.data() as SessionData)
+      : {};
+
 
     const ts = admin.firestore.Timestamp.fromDate(now);
     const hour = now.getHours();
