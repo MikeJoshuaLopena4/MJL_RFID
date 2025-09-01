@@ -9,21 +9,22 @@ A full-stack **RFID Attendance and Notification System** built with:
 
 ## 📂 Project Structure  
 
+```text
 .
-├── my-app/ # Server (Next.js + TypeScript + Firebase)
-│ ├── app/ # Next.js routes and dashboard
-│ ├── lib/ # Firebase client/server config
-│ └── ...
+├── my-app/                 # Server (Next.js + TypeScript + Firebase)
+│   ├── app/                # Next.js routes and dashboard
+│   ├── lib/                # Firebase client/server config
+│   └── ...                 
 │
 ├── my-flutter/
-│ └── my_rfid/ # Flutter mobile app
+│   └── my_rfid/            # Flutter mobile app
 │
-├── firmware/ # Embedded system firmware
-│ ├── src/ # Main Arduino/PlatformIO source
-│ └── ota/ # OTA update code
+├── firmware/               # Embedded system firmware
+│   ├── src/                # Main Arduino/PlatformIO source
+│   └── ota/                # OTA update code
 │
 └── README.md
----
+``
 
 ## 🚀 Features  
 
@@ -42,7 +43,7 @@ A full-stack **RFID Attendance and Notification System** built with:
   - Sends POST request to server  
   - Supports OTA firmware updates  
 
----
+
 
 ## ⚙️ Setup Instructions  
 
@@ -143,9 +144,6 @@ Notifications: Firebase Cloud Messaging (FCM)
 
 🙌 Acknowledgements
 Firebase
-
 Flutter
-
 Next.js
-
 PlatformIO
