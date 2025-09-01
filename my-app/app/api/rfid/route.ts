@@ -49,12 +49,11 @@ export async function POST(req: Request) {
     const dd = String(now.getDate()).padStart(2, "0");
     const todayId = `${yyyy}-${mm}-${dd}`;
 
-    // Each day is a document, each card UID is a subdoc
     const sessionRef = db
-      .collection("rfidSessions")
-      .doc(todayId)
-      .collection("cards")
-      .doc(body.uid);
+    .collection("rfidSessions")
+    .doc(todayId)
+    .collection("cards")
+    .doc(body.uid);
 
     const sessionDoc = await sessionRef.get();
     let sessionData: any = sessionDoc.exists ? sessionDoc.data() : {};
@@ -62,46 +61,72 @@ export async function POST(req: Request) {
     const ts = admin.firestore.Timestamp.fromDate(now);
     const hour = now.getHours();
 
+    // track which field was updated (AMIn, AMOut, PMIn, PMOut)
+    let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
+
     if (hour < 12) {
       // AM range
       if (!sessionData.AMIn) {
         sessionData.AMIn = ts;
+        updatedField = "AMIn";
       } else {
         sessionData.AMOut = ts; // replace with latest
+        updatedField = "AMOut";
       }
     } else {
       // PM range
       if (!sessionData.PMIn) {
         sessionData.PMIn = ts;
+        updatedField = "PMIn";
       } else {
         sessionData.PMOut = ts; // replace with latest
+        updatedField = "PMOut";
       }
     }
 
     await sessionRef.set(sessionData, { merge: true });
 
     // 4. Send FCM notification to parent device
-    if (userData?.fcmToken) {
+    if (userData?.fcmToken && updatedField) {
       const studentName = cardData?.label || "Student";
       const formattedTime = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
       });
 
+      // Decide notification text
+      let statusMessage = "";
+      switch (updatedField) {
+        case "AMIn":
+          statusMessage = "has arrived at school this morning";
+          break;
+        case "AMOut":
+          statusMessage = "has left school this morning";
+          break;
+        case "PMIn":
+          statusMessage = "has arrived at school this afternoon";
+          break;
+        case "PMOut":
+          statusMessage = "has left school this afternoon";
+          break;
+      }
+
       await fcm.send({
         token: userData.fcmToken,
         notification: {
           title: "Student Tap",
-          body: `${studentName} has arrived at school at ${formattedTime}. Swipe to view details.`,
+          body: `${studentName} ${statusMessage} at ${formattedTime}. Click to view details.`,
         },
         data: {
           uid: body.uid,
           macAddress: body.macAddress,
+          session: updatedField,
         },
       });
 
-      console.log(`✅ Notification sent to ${userData.username || userData.email}`);
+      console.log(`✅ Notification sent: ${studentName} ${statusMessage}`);
     }
+
 
     return NextResponse.json({ success: true, saved: body }, { status: 200 });
   } catch (err) {
