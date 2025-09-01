@@ -2,42 +2,26 @@ import { NextResponse } from "next/server";
 import { db, fcm, admin } from "@/lib/firebaseAdmin";
 
 // ✅ Helper: get PH local Date object
-
 function getPhilippinesDate(): Date {
   return new Date(
     new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
   );
 }
 
-function formatPHDateTime(date: Date): string {
-  return date.toLocaleString("en-US", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  }) + " UTC+8";
-}
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 🔹 Use PH-local date consistently
+    // 🔹 PH-local date & time
     const nowPH = getPhilippinesDate();
-
-    // Save raw log with PH time
     const yyyy = nowPH.getFullYear();
     const mm = String(nowPH.getMonth() + 1).padStart(2, "0");
     const dd = String(nowPH.getDate()).padStart(2, "0");
 
-    const docRef = db.collection("rfidLogs").doc();
-    await docRef.set({
+    // Save raw log
+    await db.collection("rfidLogs").doc().set({
       ...body,
-      timestamp: admin.firestore.Timestamp.fromDate(nowPH), // ✅ PH-local
+      timestamp: admin.firestore.Timestamp.fromDate(nowPH),
       localDate: `${yyyy}-${mm}-${dd}`,
       localTime: nowPH.toLocaleTimeString("en-PH", {
         hour: "2-digit",
@@ -46,17 +30,16 @@ export async function POST(req: Request) {
       }),
     });
 
-    // 2. Find the user who owns this card
-    const usersRef = db.collection("users");
-    const usersSnap = await usersRef.get();
-
+    // 🔹 Find user linked to this card
+    const usersSnap = await db.collection("users").get();
     let matchedUser: FirebaseFirestore.DocumentSnapshot | null = null;
     let matchedCard: FirebaseFirestore.DocumentSnapshot | null = null;
 
     for (const userDoc of usersSnap.docs) {
-      const idsRef = userDoc.ref.collection("ids");
-      const cardSnap = await idsRef.where("id", "==", body.uid).get();
-
+      const cardSnap = await userDoc.ref
+        .collection("ids")
+        .where("id", "==", body.uid)
+        .get();
       if (!cardSnap.empty) {
         matchedUser = userDoc;
         matchedCard = cardSnap.docs[0];
@@ -72,102 +55,79 @@ export async function POST(req: Request) {
       );
     }
 
-    const userData = matchedUser.data();
-    const cardData = matchedCard.data();
-
-    // ✅ PH-local time for session tracking
-    // 3. Work out today’s session doc in PH timezone
-
-
+    // 🔹 Prepare session document
     const todayId = `${yyyy}-${mm}-${dd}`;
-      const sessionRef = db
-        .collection("rfidSessions")
-        .doc(todayId)
-        .collection("cards")
-        .doc(body.uid);
+    const sessionRef = db
+      .collection("rfidSessions")
+      .doc(todayId)
+      .collection("cards")
+      .doc(body.uid);
 
-      const sessionDoc = await sessionRef.get();
-      const formattedPH = formatPHDateTime(nowPH);
-      type SessionData = {
-        AMIn?: string;
-        AMOut?: string;
-        PMIn?: string;
-        PMOut?: string;
-      };
-      const sessionData: SessionData = sessionDoc.exists
-        ? (sessionDoc.data() as SessionData)
-        : {};
-      // ✅ Use PH-local timestamp
-      const hour = nowPH.getHours();
+    const sessionDoc = await sessionRef.get();
+    const sessionData = sessionDoc.exists ? sessionDoc.data()! : {};
 
-      let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
+    const ts = admin.firestore.Timestamp.fromDate(nowPH);
+    const hour = nowPH.getHours();
 
+    // Determine which session field to update
+    let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
 
-      if (hour < 12) {
-        if (!sessionData.AMIn) {
-          sessionData.AMIn = formattedPH;
-          updatedField = "AMIn";
-        } else {
-          sessionData.AMOut = formattedPH;
-          updatedField = "AMOut";
-        }
+    if (hour < 12) {
+      if (!sessionData.AMIn) {
+        sessionData.AMIn = ts;
+        updatedField = "AMIn";
       } else {
-        if (!sessionData.PMIn) {
-          sessionData.PMIn = formattedPH;
-          updatedField = "PMIn";
-        } else {
-          sessionData.PMOut = formattedPH;
-          updatedField = "PMOut";
-        }
+        sessionData.AMOut = ts;
+        updatedField = "AMOut";
       }
-
-      await sessionRef.set(sessionData, { merge: true });
-
-      // ✅ Notification now also shows PH-local time
-      if (userData?.fcmToken && updatedField) {
-        const studentName = cardData?.label || "Student";
-        const formattedTime = nowPH.toLocaleTimeString("en-PH", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-
-        let statusMessage = "";
-        switch (updatedField) {
-          case "AMIn":
-            statusMessage = "has arrived at school this morning";
-            break;
-          case "AMOut":
-            statusMessage = "has left school this morning";
-            break;
-          case "PMIn":
-            statusMessage = "has arrived at school this afternoon";
-            break;
-          case "PMOut":
-            statusMessage = "has left school this afternoon";
-            break;
-        }
-
-        await fcm.send({
-          token: userData.fcmToken,
-          notification: {
-            title: "Student Tap",
-            body: `${studentName} ${statusMessage} at ${formattedTime}. Click to view details.`,
-          },
-          data: {
-            uid: body.uid,
-            macAddress: body.macAddress,
-            session: updatedField,
-          },
-        });
+    } else {
+      if (!sessionData.PMIn) {
+        sessionData.PMIn = ts;
+        updatedField = "PMIn";
+      } else {
+        sessionData.PMOut = ts;
+        updatedField = "PMOut";
       }
-
-      return NextResponse.json({ success: true, saved: body }, { status: 200 });
-    } catch (err) {
-      console.error("❌ Error:", err);
-      return NextResponse.json(
-        { success: false, error: String(err) },
-        { status: 400 }
-      );
     }
+
+    await sessionRef.set(sessionData, { merge: true });
+
+    // 🔹 Send notification (if user has FCM token)
+    if (matchedUser.data()?.fcmToken && updatedField) {
+      const studentName = matchedCard.data()?.label || "Student";
+      const formattedTime = nowPH.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      const statusMessageMap: Record<string, string> = {
+        AMIn: "has arrived at school this morning",
+        AMOut: "has left school this morning",
+        PMIn: "has arrived at school this afternoon",
+        PMOut: "has left school this afternoon",
+      };
+
+      await fcm.send({
+        token: matchedUser.data()!.fcmToken,
+        notification: {
+          title: "Student Tap",
+          body: `${studentName} ${statusMessageMap[updatedField]} at ${formattedTime}. Click to view details.`,
+        },
+        data: {
+          uid: body.uid,
+          macAddress: body.macAddress,
+          session: updatedField,
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true, saved: body }, { status: 200 });
+  } catch (err) {
+    console.error("❌ Error:", err);
+    return NextResponse.json(
+      { success: false, error: String(err) },
+      { status: 400 }
+    );
   }
+}
