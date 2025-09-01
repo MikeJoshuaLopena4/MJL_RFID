@@ -10,6 +10,29 @@ function getPhilippinesDate(): Date {
   return new Date(phString);
 }
 
+// ✅ Helper: Format date to string like "September 2, 2025 at 7:35:51 PM UTC+8"
+function formatPhilippinesTimestamp(date: Date): string {
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  // Format time with AM/PM
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // Convert 0 to 12
+  
+  return `${month} ${day}, ${year} at ${hours}:${minutes}:${seconds} ${period} UTC+8`;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -69,7 +92,7 @@ export async function POST(req: Request) {
     const sessionDoc = await sessionRef.get();
     const sessionData = sessionDoc.exists ? sessionDoc.data()! : {};
 
-    const ts = admin.firestore.Timestamp.fromDate(nowPH);
+    const formattedTime = formatPhilippinesTimestamp(nowPH);
     const hour = nowPH.getHours();
 
     // Determine which session field to update
@@ -77,18 +100,18 @@ export async function POST(req: Request) {
 
     if (hour < 12) {
       if (!sessionData.AMIn) {
-        sessionData.AMIn = ts;
+        sessionData.AMIn = formattedTime; // Store as formatted string instead of Timestamp
         updatedField = "AMIn";
       } else {
-        sessionData.AMOut = ts;
+        sessionData.AMOut = formattedTime; // Store as formatted string instead of Timestamp
         updatedField = "AMOut";
       }
     } else {
       if (!sessionData.PMIn) {
-        sessionData.PMIn = ts;
+        sessionData.PMIn = formattedTime; // Store as formatted string instead of Timestamp
         updatedField = "PMIn";
       } else {
-        sessionData.PMOut = ts;
+        sessionData.PMOut = formattedTime; // Store as formatted string instead of Timestamp
         updatedField = "PMOut";
       }
     }
@@ -98,7 +121,7 @@ export async function POST(req: Request) {
     // 🔹 Send notification (if user has FCM token)
     if (matchedUser.data()?.fcmToken && updatedField) {
       const studentName = matchedCard.data()?.label || "Student";
-      const formattedTime = nowPH.toLocaleTimeString("en-PH", {
+      const displayTime = nowPH.toLocaleTimeString("en-PH", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
@@ -114,8 +137,8 @@ export async function POST(req: Request) {
       await fcm.send({
         token: matchedUser.data()!.fcmToken,
         notification: {
-          title: "Student Tap",
-          body: `${studentName} ${statusMessageMap[updatedField]} at ${formattedTime}. Click to view details.`,
+          title: "MJL RFID",
+          body: `${studentName} ${statusMessageMap[updatedField]} at ${displayTime}. Click to view details.`,
         },
         data: {
           uid: body.uid,
