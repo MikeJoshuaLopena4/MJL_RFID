@@ -2,30 +2,41 @@ import { NextResponse } from "next/server";
 import { db, fcm, admin } from "@/lib/firebaseAdmin";
 import { format, toZonedTime } from "date-fns-tz";
 
-// ✅ Helper: get PH-local date & time as Date object
-function getPhilippinesDate(): Date {
-  const now = new Date();
-  // Convert to PH timezone (Asia/Manila)
-  return toZonedTime(now, "Asia/Manila");
+// ✅ Helper: get PH-local date & time
+function getPhilippinesNow() {
+  const nowUTC = new Date(); // current UTC
+  const nowPH = toZonedTime(nowUTC, "Asia/Manila");
+
+  return {
+    utc: nowUTC,   // safe for Firestore
+    zoned: nowPH,  // PH local representation
+  };
+}
+
+// ✅ Helper: Convert PH-local Date to Firestore Timestamp that looks PH-correct
+function philippineTimestamp(datePH: Date) {
+  // Shift by -8 hours so Firestore UTC = PH local
+  const shifted = new Date(datePH.getTime() - 8 * 60 * 60 * 1000);
+  return admin.firestore.Timestamp.fromDate(shifted);
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 🔹 PH-local date & time
-    const nowPH = getPhilippinesDate();
-    
-    // Get PH time components for the document ID
-    const phDate = format(nowPH, "yyyy-MM-dd", { timeZone: "Asia/Manila" });
-    const [yyyy, mm, dd] = phDate.split("-");
+    // 🔹 Get both UTC + PH times
+    const { utc, zoned } = getPhilippinesNow();
 
-    // Save raw log - store as proper Timestamp
+    // For IDs & display fields
+    const phDate = format(zoned, "yyyy-MM-dd", { timeZone: "Asia/Manila" });
+    const phTime = format(zoned, "hh:mm a", { timeZone: "Asia/Manila" });
+
+    // 🔹 Save raw log - store proper UTC + display fields
     await db.collection("rfidLogs").doc().set({
       ...body,
-      timestamp: admin.firestore.Timestamp.fromDate(nowPH),
+      timestamp: admin.firestore.Timestamp.fromDate(utc), // UTC safe
       localDate: phDate,
-      localTime: format(nowPH, "hh:mm a", { timeZone: "Asia/Manila" }),
+      localTime: phTime,
     });
 
     // 🔹 Find user linked to this card
@@ -64,26 +75,29 @@ export async function POST(req: Request) {
     const sessionDoc = await sessionRef.get();
     const sessionData = sessionDoc.exists ? sessionDoc.data()! : {};
 
-    const ts = admin.firestore.Timestamp.fromDate(nowPH); // Store as proper Timestamp
-    const hour = parseInt(format(nowPH, "H", { timeZone: "Asia/Manila" })); // Get PH hour
+    // ✅ Store PH-correct timestamp
+    const ts = philippineTimestamp(zoned);
+
+    // Get PH hour for AM/PM classification
+    const hour = parseInt(format(zoned, "H", { timeZone: "Asia/Manila" }));
 
     // Determine which session field to update
     let updatedField: "AMIn" | "AMOut" | "PMIn" | "PMOut" | null = null;
 
     if (hour < 12) {
       if (!sessionData.AMIn) {
-        sessionData.AMIn = ts; // Store as proper Timestamp
+        sessionData.AMIn = ts;
         updatedField = "AMIn";
       } else {
-        sessionData.AMOut = ts; // Store as proper Timestamp
+        sessionData.AMOut = ts;
         updatedField = "AMOut";
       }
     } else {
       if (!sessionData.PMIn) {
-        sessionData.PMIn = ts; // Store as proper Timestamp
+        sessionData.PMIn = ts;
         updatedField = "PMIn";
       } else {
-        sessionData.PMOut = ts; // Store as proper Timestamp
+        sessionData.PMOut = ts;
         updatedField = "PMOut";
       }
     }
@@ -93,7 +107,7 @@ export async function POST(req: Request) {
     // 🔹 Send notification (if user has FCM token)
     if (matchedUser.data()?.fcmToken && updatedField) {
       const studentName = matchedCard.data()?.label || "Student";
-      const displayTime = format(nowPH, "hh:mm a", { timeZone: "Asia/Manila" });
+      const displayTime = format(zoned, "hh:mm a", { timeZone: "Asia/Manila" });
 
       const statusMessageMap: Record<string, string> = {
         AMIn: "has arrived at school this morning",
