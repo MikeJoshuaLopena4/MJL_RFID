@@ -72,12 +72,15 @@ npm run dev
 Go to my-flutter/my_rfid/
 
 Install dependencies:
-
-:- cd my-flutter/my_rfid
-:- flutter pub get
+   ```bash
+   cd my-flutter/my_rfid
+   flutter pub get
+  ```
 
 Run on emulator or device:
+   ```bash
 :- flutter run
+   ```
 
 3. Firmware (ESP32/ESP8266)
 Go to firmware/
@@ -90,7 +93,7 @@ OTA Update: Once device is running, you can push new firmware via WiFi
 
 🔐 Firestore Rules (Sample)
 js
-
+   ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -124,6 +127,7 @@ service cloud.firestore {
     }
   }
 }
+  ```
 
 📸 Screenshots
 Dashboard – real-time logs & sessions
