@@ -1,5 +1,7 @@
 # RFID Attendance System  
 
+![Image](https://github.com/user-attachments/assets/ac9b0402-6228-48ab-b65e-f5cbc2cbe583)
+
 A full-stack **RFID Attendance and Notification System** built with:  
 - **Next.js (TypeScript)** – Backend API + Web Dashboard  
 - **Flutter** – Mobile app for users/parents to log in and receive notifications  
