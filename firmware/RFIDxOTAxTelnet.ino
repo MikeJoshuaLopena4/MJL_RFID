@@ -85,10 +85,10 @@ void WiFiEvent(WiFiEvent_t event) {
 bool sendUIDNotif(String uidStr) {
   uidStr.trim();
 
-  // ✨ Strip spaces in UID
+  // trip spaces in UID
   uidStr.replace(" ", "");
 
-  // ✨ Prepare MAC (last 3 octets, no colons)
+  //  Prepare MAC (last 3 octets, no colons)
   String macProcessed = String(macStr);
   macProcessed.replace(":", "");               // remove colons
   macProcessed = macProcessed.substring(6);    // last 3 octets (6 hex chars)
@@ -98,10 +98,10 @@ bool sendUIDNotif(String uidStr) {
     client.print(macProcessed);
     client.print(",");
     client.print(uidStr);
-    client.print(";");   // ✅ terminate with semicolon + newline
+    client.print(";");   // terminate with semicolon + newline
     client.flush();
 
-    logPrint("➡️ Sent to server: ");
+    logPrint("Sent to server: ");
     logPrintln(macProcessed + "," + uidStr + ";");
 
     
@@ -110,7 +110,7 @@ bool sendUIDNotif(String uidStr) {
       if (client.available()) {
         char c = client.read();
         if (c == '\n') {
-          logPrintln("✅ ACK received from server");
+          logPrintln(" ACK received from server");
           client.stop();
           beep(300);   
           return true;
@@ -119,12 +119,12 @@ bool sendUIDNotif(String uidStr) {
       ArduinoOTA.handle(); // keep OTA responsive while waiting
     }
 
-    logPrintln("⚠️ No ACK from server (timeout)");
+    logPrintln(" No ACK from server (timeout)");
     client.stop();
     return false;
 
   } else {
-    logPrintln("❌ TCP connection failed on port 3000");
+    logPrintln(" TCP connection failed on port 3000");
     return false;
   }
 }
@@ -220,7 +220,7 @@ void loop() {
     }
   }
 
-  // ✨ Check if telnet client sent something
+  //  Check if telnet client sent something
   if (telnetClient && telnetClient.connected() && telnetClient.available()) {
     String cmd = telnetClient.readStringUntil('\n');
     cmd.trim();
